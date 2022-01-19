@@ -6,6 +6,7 @@
 #include <vector>
 #include <cmath>
 #include <limits>
+# include <numeric>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -40,6 +41,15 @@ int main(int argc, const char *argv[])
     vector<DataFrame> dataBuffer; // list of data frames which are held in memory at the same time
     bool bVis = false;            // visualize results
 
+    vector<float> recordedDetectorNum;
+    vector<float> recordedDetectorTime;
+    vector<float> recordedMatchesNum;
+    vector<float> recordedDescriptorTime;
+
+    string detectorType = "AKAZE"; //SHITOMASI, HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
+
+    string descriptorType = "AKAZE"; // BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
+
     /* MAIN LOOP OVER ALL IMAGES */
 
     for (size_t imgIndex = 0; imgIndex <= imgEndIndex - imgStartIndex; imgIndex++)
@@ -68,25 +78,24 @@ int main(int argc, const char *argv[])
         dataBuffer.push_back(frame);
 
         //// EOF STUDENT ASSIGNMENT
-        cout << "#1 : LOAD IMAGE INTO BUFFER done" << endl;
+        // cout << "#1 : LOAD IMAGE INTO BUFFER done" << endl;
 
         /* DETECT IMAGE KEYPOINTS */
 
         // extract 2D keypoints from current image
         vector<cv::KeyPoint> keypoints; // create empty feature list for current image
-        string detectorType = "SHITOMASI";
+        
 
         //// STUDENT ASSIGNMENT
         //// TASK MP.2 -> add the following keypoint detectors in file matching2D.cpp and enable string-based selection based on detectorType
         //// -> HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
 
-        if (detectorType.compare("SHITOMASI") == 0)
-        {
-            detKeypointsShiTomasi(keypoints, imgGray, false);
-        }
-        else
-        {
-            //...
+        if (detectorType.compare("SHITOMASI") == 0) {
+            detKeypointsShiTomasi(keypoints, imgGray, recordedDetectorTime, bVis);
+        } else if (detectorType.compare("HARRIS") == 0) {
+            detKeypointsHarris(keypoints, imgGray, recordedDetectorTime, bVis);
+        } else {
+            detKeypointsModern(keypoints, imgGray, detectorType, recordedDetectorTime, bVis);
         }
         //// EOF STUDENT ASSIGNMENT
 
@@ -96,10 +105,18 @@ int main(int argc, const char *argv[])
         // only keep keypoints on the preceding vehicle
         bool bFocusOnVehicle = true;
         cv::Rect vehicleRect(535, 180, 180, 150);
-        if (bFocusOnVehicle)
-        {
-            // ...
+        if (bFocusOnVehicle) {
+            vector<cv::KeyPoint> kept;
+            for (auto point : keypoints) {
+                if (vehicleRect.contains((point.pt))) {
+                    kept.push_back(point);
+                }
+            }
+
+            keypoints = kept;
         }
+
+        recordedDetectorNum.push_back(keypoints.size());
 
         //// EOF STUDENT ASSIGNMENT
 
@@ -114,12 +131,12 @@ int main(int argc, const char *argv[])
                 keypoints.erase(keypoints.begin() + maxKeypoints, keypoints.end());
             }
             cv::KeyPointsFilter::retainBest(keypoints, maxKeypoints);
-            cout << " NOTE: Keypoints have been limited!" << endl;
+            // cout << " NOTE: Keypoints have been limited!" << endl;
         }
 
         // push keypoints and descriptor for current frame to end of data buffer
         (dataBuffer.end() - 1)->keypoints = keypoints;
-        cout << "#2 : DETECT KEYPOINTS done" << endl;
+        // cout << "#2 : DETECT KEYPOINTS done" << endl;
 
         /* EXTRACT KEYPOINT DESCRIPTORS */
 
@@ -128,14 +145,14 @@ int main(int argc, const char *argv[])
         //// -> BRIEF, ORB, FREAK, AKAZE, SIFT
 
         cv::Mat descriptors;
-        string descriptorType = "BRISK"; // BRIEF, ORB, FREAK, AKAZE, SIFT
-        descKeypoints((dataBuffer.end() - 1)->keypoints, (dataBuffer.end() - 1)->cameraImg, descriptors, descriptorType);
+        
+        descKeypoints((dataBuffer.end() - 1)->keypoints, (dataBuffer.end() - 1)->cameraImg, descriptors, descriptorType, recordedDescriptorTime);
         //// EOF STUDENT ASSIGNMENT
 
         // push descriptors for current frame to end of data buffer
         (dataBuffer.end() - 1)->descriptors = descriptors;
 
-        cout << "#3 : EXTRACT DESCRIPTORS done" << endl;
+        // cout << "#3 : EXTRACT DESCRIPTORS done" << endl;
 
         if (dataBuffer.size() > 1) // wait until at least two images have been processed
         {
@@ -153,17 +170,17 @@ int main(int argc, const char *argv[])
 
             matchDescriptors((dataBuffer.end() - 2)->keypoints, (dataBuffer.end() - 1)->keypoints,
                              (dataBuffer.end() - 2)->descriptors, (dataBuffer.end() - 1)->descriptors,
-                             matches, descriptorType, matcherType, selectorType);
+                             matches, descriptorType, matcherType, selectorType, recordedMatchesNum);
 
             //// EOF STUDENT ASSIGNMENT
 
             // store matches in current data frame
             (dataBuffer.end() - 1)->kptMatches = matches;
 
-            cout << "#4 : MATCH KEYPOINT DESCRIPTORS done" << endl;
+            // cout << "#4 : MATCH KEYPOINT DESCRIPTORS done" << endl;
 
             // visualize matches between current and previous image
-            bVis = true;
+            //bVis = true;
             if (bVis)
             {
                 cv::Mat matchImg = ((dataBuffer.end() - 1)->cameraImg).clone();
@@ -183,6 +200,17 @@ int main(int argc, const char *argv[])
         }
 
     } // eof loop over all images
+
+    cout << "detector type: " << detectorType << "; descriptor type: " << descriptorType << endl;
+    //cout << "recordedDetectorNum size: " << recordedDetectorNum.size() << endl;
+    //cout << "recordedDetectorTime size: " << recordedDetectorTime.size() << endl;
+    //cout << "recordedMatchesNum size: " << recordedMatchesNum.size() << endl;
+    //cout << "recordedDescriptorTime size: " << recordedDescriptorTime.size() << endl;
+    
+    cout << "Detector key point num avg: " << accumulate(recordedDetectorNum.begin(), recordedDetectorNum.end(), 0.0)/recordedDetectorNum.size() << endl;
+    cout << "Detector key point time avg: " << accumulate(recordedDetectorTime.begin(), recordedDetectorTime.end(), 0.0)/recordedDetectorTime.size() << endl;
+    cout << "Matched key point num avg: " << accumulate(recordedMatchesNum.begin(), recordedMatchesNum.end(), 0.0)/recordedMatchesNum.size() << endl;
+    cout << "Descriptor key point time avg: " << accumulate(recordedDescriptorTime.begin(), recordedDescriptorTime.end(), 0.0)/recordedDescriptorTime.size() << endl;
 
     return 0;
 }
