@@ -8,6 +8,24 @@ You can try diff combinations of detectors and descriptors by changing the strin
 
 In order to record the metrics, I made some changes to the function signature, where some vectors will also be passed in, such that we could log the computation time and size. These vectors will lastly be printed, and for my runs, the output is recorded inside the file src/RawOutput.md.
 
+## Implementation MP 1: Data buffer
+This part is to add in support for a ring-buffer such that we could cinstantly push in new images / data points into the buffer vector, therefore we could compare the current buffer size against the maximum size (2 in this case), and once it exceeds, simply remove the first entry (achieved by `vector.erase()` method).
+
+## Implementation MP 2 and 4: Add in modern detectors and descriptors
+The basic Shi-Tomasi and HARRIS corner detectors have been demonstrated during lectures, so the primary focus here is to implement the other types. Interestingly, note that common practice from OpenCV tutorials is to simply specify the feature extractor via things like `detector->detectAndCompute(image1, cv::Mat(), keyPoints1, descriptors1);`. here in order to compare all combinations of detectors and descriptors, we are splitting the detection step and description step, therefore, we'd first check the passed-in detector/descriptor type in string format, and then specify the high level detector/descriptor like `detector = cv::ORB::create();`, and subsequently perform `->detect` and `->compute` separately.
+
+## Implementation MP 3: Only retain keypoints on the preceeding vehicle
+This part is mainly about manipulating the keypoints from the previous MP 2, against a pre-defined region specified by `cv::Rect`. Note that the OpenCV KeyPoint class has a field named `pt` (see explanation [here](https://docs.opencv.org/3.4/d2/d29/classcv_1_1KeyPoint.html)), which is the coordinate of the point, hence we could iterate through all the retrieved keypoints, and only keep those falling into the rectangle region.
+
+## Implementation MP 5: FLANNBASED matching
+Matcher can be specified following the tutorial [here](https://docs.opencv.org/3.4/d5/d6f/tutorial_feature_flann_matcher.html). Several notes here: first one is when using the SIFT descriptor, we should be using the L2-norm as the distance computation scheme; secondly, as specified [here](https://stackoverflow.com/q/43830849/3455398), FLANNBASED requires the descriptor to be in type CV_32F so we need to do the conversion first.
+
+## Implementation MP 6: Distance ratio
+Sample explanation can be found on the same [tutorial](https://docs.opencv.org/3.4/d5/d6f/tutorial_feature_flann_matcher.html): after we got the 2 nearest distances between match pair, to avoid false matches, we can perform a quick filter: we'll only treat the closest pair as a __valid__ pair when its distance is smaller than the second smallest value by certain amount. With the 0.8 used as the pre-defined threshold, it means 
+```
+if (closest_dist / second_closest_dist < 0.8) // treat the closest_dist as a valid match
+```
+
 ## Performance MP 7: Number of detected keypoints comparison
 The average number of detected keypoints for all 10 images can be found in the below table.
 
