@@ -1,12 +1,26 @@
 # Report
 
-## MP 7: Number of detected keypoints comparison
+## Overview
+In this project, we implemented various corner detectors + feature descriptors, and have concatenated their workflow such that keypoints are extracted from the images, matched, and the computation time from diff combinations are logged and compared.
+
+## Running and Result
+You can try diff combinations of detectors and descriptors by changing the string in MidTermProject_Camera_Student file, line 49 and 51. Note that for the below sections, I'm mainly computing the value for each image, and then take the average of all 9/10 data points when focusing on one particular instance/pair.
+
+In order to record the metrics, I made some changes to the function signature, where some vectors will also be passed in, such that we could log the computation time and size. These vectors will lastly be printed, and for my runs, the output is recorded inside the file src/RawOutput.md.
+
+## Performance MP 7: Number of detected keypoints comparison
+The average number of detected keypoints for all 10 images can be found in the below table.
 
 |   Detector type    | Shi-Tomasi |   HARRIS   |   FAST   |  BRISK  |    ORB    |    AKAZE    |   SIFT   |
 | :---------------:  | :--------: | :---------:| :-------:| :-----: | :--------:|  :--------: |:--------:|
 |Avg cnt of detection|    117.9   |    24.8    |   149.1  |  276.2  |   116.1   |      167    |  138.6   |
 
-## MP 8: Number of matched keypoints for all pairs
+As for the distribution of the keypoints and the nighborhood sizes: 
+* Shi-Tomasi, HARRIS, FAST share some common attributes: the detected keypoints neighborhood sizes are roughly on the same level (detected circles with similar sizes). However, it can be seen clearly that HARRIS detected far fewer points than the other 2, actually far fewer than any other detectors, which is also shown by the above table;
+* BRISK, ORB, AKAZE, SIFT have varying sizes, with BRISK and ORB yielding slightly larger points than the other 2. However, BRISK and ORB also show much overlapping for the detection bubbles.
+
+## Performance MP 8: Number of matched keypoints for all pairs
+The average number of matched keypoints on all 9 image-pair can be found in the below table.
 
 |  Detector/Descriptor |   BRISK  |   BRIEF  |   ORB   |  FREAK  |  AKAZE  |   SIFT  |
 |:--------------------:|:--------:|:--------:|:-------:|:-------:|:-------:|:-------:|
@@ -18,7 +32,10 @@
 |       **AKAZE**      |    N/A   |    N/A   |   N/A   |   N/A   | 130.222 |   N/A   |
 |       **SIFT**       |  59.5556 |  66.3333 |   N/A   | 56.2222 |   N/A   | 88.8889 |
 
-## MP 9: Computation time for all pairs
+It can be seen that the matched number roughly stay at the same scale of detected points from MP 7: when the detector could mark more keypoints, then we could establish more matches. However, as AKAZE detector could only be used with AKAZE descriptor, its associated row and column are left as N/A. Additionally, the pair (__SIFT detector, ORB descriptor__) produces core-dumped error even after multiple tries, so I'm leaving it out as well.
+
+## Performance MP 9: Computation time for all pairs
+The average computation time for each detector and descriptor (averaged over 10 images) can be found in the below table.
 
 |  Detector/Descriptor |         BRISK        |         BRIEF        |         ORB         |         FREAK         |         AKAZE        |          SIFT         |
 |:--------------------:|:--------------------:|:--------------------:|:-------------------:|:---------------------:|:--------------------:|:---------------------:|
@@ -29,3 +46,10 @@
 |       **ORB**        |  9.57067 / 1.89368   |   8.89255 / 0.73962  |   7.7929 / 4.70806  |   8.24856 / 46.0275   |          N/A         |   10.0542 / 79.5501   |
 |       **AKAZE**      |          N/A         |          N/A         |         N/A         |           N/A         |   130.222 / 109.853  |          N/A          |
 |       **SIFT**       |   161.46 / 1.95341   |    138.6 / 0.919097  |         N/A         |   174.587 / 49.6796   |          N/A         |    155.124 / 109.643  |
+
+Among all the results, it's easy to see that in terms of computation speed, we should go with detector __FAST__, where on average a rough 0.8 to 1 ms is spent, while the rest will take at least 10 times longer. However, in my opinion in order to tell the best pair, the number of detected/matched points should also be considered: e.g., the combination of FAST + SIFT produces 116 matched points, the largest one for all FAST results, but the average descriptor time for SIFT is 33 ms, much more than BRISK, BRIEF, ORB. Therefore my recommendation would be:
+1. FAST + BRIEF;
+2. FAST + ORB;
+3. FAST + BRISK.
+
+These pairs give the fastest processing time, while maintaining a reasonable number of matched points at the same time (all around 80 to 90 matched points).
