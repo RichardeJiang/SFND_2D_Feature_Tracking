@@ -34,6 +34,9 @@ The average number of matched keypoints on all 9 image-pair can be found in the 
 
 It can be seen that the matched number roughly stay at the same scale of detected points from MP 7: when the detector could mark more keypoints, then we could establish more matches. However, as AKAZE detector could only be used with AKAZE descriptor, its associated row and column are left as N/A. Additionally, the pair (__SIFT detector, ORB descriptor__) produces core-dumped error even after multiple tries, so I'm leaving it out as well.
 
+Sample output, using the Shi-Tomasi detector and BRISK descriptor:
+![Sample Results](shitomasi-brisk.png)
+
 ## Performance MP 9: Computation time for all pairs
 The average computation time for each detector and descriptor (averaged over 10 images) can be found in the below table.
 
